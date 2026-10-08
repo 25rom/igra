@@ -1,0 +1,799 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Игра типов — локальная версия</title>
+<meta name="description" content="Коротко и с юмором о том, как Юнг разделил людей на типы: четыре функции, две установки и тень. Потом — тест.">
+<meta property="og:title" content="Игра типов">
+<meta property="og:description" content="Четыре функции, две установки и тень. Юнгианская типология без серьёзного лица.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#DCD8EE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#191734" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pangolin&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* ---------- tokens ---------- */
+:root{
+  --paper:#DCD8EE; --paper-2:#EEEBF7; --ink:#26235E; --ink-2:#5D5A96;
+  --sun:#F2BE2E; --night:#14122E; --night-ink:#F2BE2E;
+  --display:"Unbounded", "Arial Black", system-ui, sans-serif;
+  --hand:"Pangolin", "Comic Sans MS", "Segoe Print", cursive;
+  --line:3px;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#191734; --paper-2:#24214A; --ink:#E7E3FA; --ink-2:#A9A5D6;
+  }
+}
+:root[data-theme="dark"]{ --paper:#191734; --paper-2:#24214A; --ink:#E7E3FA; --ink-2:#A9A5D6; }
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%; scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; height:100%; background:var(--paper); color:var(--ink);
+  font-family:var(--hand); font-size:18px; line-height:1.45;
+  display:flex; flex-direction:column; overflow-x:hidden;
+}
+a{color:inherit}
+button{font:inherit; color:inherit; cursor:pointer}
+:focus-visible{outline:3px solid var(--sun); outline-offset:3px}
+
+/* ---------- top bar ---------- */
+.bar{display:flex; justify-content:space-between; align-items:center; padding:14px 18px; gap:12px}
+.brand{font-family:var(--display); font-weight:800; font-size:15px; letter-spacing:-.01em; background:none; border:0; padding:0}
+.skip{font-size:15px; color:var(--ink-2); background:none; border:0; text-decoration:underline; text-underline-offset:3px; padding:4px 0}
+
+/* ---------- stage ---------- */
+#app{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px 16px 20px; min-height:0}
+.screen{width:100%; max-width:460px; display:flex; flex-direction:column; gap:18px}
+
+/* ---------- comic panel ---------- */
+.panel{
+  position:relative; background:var(--paper-2); border:var(--line) solid var(--ink);
+  box-shadow:6px 6px 0 var(--ink); padding:0; cursor:pointer; user-select:none;
+}
+.panel svg{display:block; width:100%; height:auto}
+.caption{
+  position:relative; display:inline-block; margin:-14px 0 -6px -8px; max-width:86%; z-index:2;
+  background:var(--sun); color:#26235E; border:var(--line) solid var(--ink);
+  padding:8px 12px; font-size:16px; line-height:1.3; transform:rotate(-1.5deg);
+}
+.bubble{
+  position:absolute; background:#fff; color:#26235E; border:var(--line) solid var(--ink);
+  border-radius:22px; padding:10px 14px; font-size:17px; line-height:1.3; max-width:52%;
+}
+.bubble::after{
+  content:""; position:absolute; width:18px; height:18px; background:#fff;
+  border-right:var(--line) solid var(--ink); border-bottom:var(--line) solid var(--ink);
+}
+.bubble.tail-bl::after{left:26px; bottom:-11px; transform:rotate(45deg) skew(10deg,10deg)}
+.bubble.tail-br::after{right:26px; bottom:-11px; transform:rotate(45deg) skew(10deg,10deg)}
+.bubble.tail-tl::after{left:26px; top:-11px; transform:rotate(225deg) skew(10deg,10deg)}
+.narr{font-size:19px; text-align:left; margin:4px 2px 0}
+
+.row{display:flex; align-items:center; justify-content:space-between; gap:12px}
+.pips{display:flex; gap:6px}
+.pip{width:14px; height:14px; border:2px solid var(--ink); background:transparent}
+.pip.on{background:var(--ink)}
+.btn{
+  font-family:var(--display); font-weight:700; font-size:14px;
+  background:var(--ink); color:var(--paper); border:var(--line) solid var(--ink);
+  padding:12px 18px; box-shadow:4px 4px 0 var(--sun); transition:transform .12s, box-shadow .12s;
+}
+.btn:active{transform:translate(3px,3px); box-shadow:1px 1px 0 var(--sun)}
+.btn.ghost{background:transparent; color:var(--ink); box-shadow:none}
+.btn[disabled]{opacity:.3; cursor:default}
+
+/* ---------- deck ---------- */
+.deck{position:relative; height:min(560px, 68vh); touch-action:pan-y}
+.card{
+  position:absolute; inset:0; background:var(--paper-2); color:var(--ink);
+  border:var(--line) solid var(--ink); box-shadow:6px 6px 0 var(--ink);
+  padding:22px 22px 20px; display:flex; flex-direction:column; gap:10px; overflow:auto;
+  transform-origin:50% 100%; will-change:transform;
+}
+.card.behind-1{transform:translate(8px,8px) rotate(2deg); z-index:1}
+.card.behind-2{transform:translate(16px,14px) rotate(-2deg); z-index:0}
+.card.top{z-index:2; cursor:grab; touch-action:pan-y}
+.card.top.drag{cursor:grabbing; transition:none}
+.card.anim{transition:transform .28s ease-out, opacity .28s}
+.card.behind-1 > *, .card.behind-2 > *{visibility:hidden}
+.card .glyph{width:96px; height:96px; flex:none}
+.card h2{font-family:var(--display); font-weight:800; font-size:clamp(26px,7vw,34px); line-height:1.05; margin:4px 0 0; letter-spacing:-.02em}
+.card .lead{font-size:20px; margin:0}
+.card .lead span{background:linear-gradient(transparent 55%, var(--sun) 55%); -webkit-box-decoration-break:clone; box-decoration-break:clone; padding:0 2px}
+.card .body{margin:0}
+.card .life{margin:auto 0 0; padding-top:10px; border-top:2px dashed var(--ink-2); font-size:17px}
+.card .life b{font-weight:400; color:var(--ink-2)}
+.card.shadow{background:var(--night); color:#EDE9FF; border-color:var(--night); box-shadow:6px 6px 0 var(--sun)}
+.card.shadow .lead span{background:linear-gradient(transparent 55%, #4B3F8F 55%)}
+.card.shadow .life{border-color:#6C66A8}
+.card.shadow .life b{color:var(--night-ink)}
+.card.finale{background:var(--sun); color:#26235E; justify-content:center}
+.card.finale .btn{align-self:flex-start; margin-top:12px; background:#26235E; color:#F2BE2E; box-shadow:4px 4px 0 #fff; border-color:#26235E}
+.count{font-family:var(--display); font-size:13px; font-weight:500; color:var(--ink-2)}
+.hint{font-size:15px; color:var(--ink-2); text-align:center; margin:0}
+
+/* ---------- test stub ---------- */
+.stub h1{font-family:var(--display); font-weight:800; font-size:clamp(28px,8vw,40px); line-height:1.05; margin:0; letter-spacing:-.02em}
+.stub p{margin:0; max-width:36ch}
+.eco{border-top:2px solid var(--ink); padding-top:14px; font-size:16px; display:flex; flex-wrap:wrap; gap:6px 18px; color:var(--ink-2)}
+.eco a{color:var(--ink); text-underline-offset:3px}
+
+/* ---------- svg ink ---------- */
+.s-ink{stroke:var(--ink); fill:none; stroke-width:4; stroke-linecap:round; stroke-linejoin:round}
+.f-ink{fill:var(--ink)} .f-paper{fill:var(--paper-2)} .f-sun{fill:var(--sun)} .f-white{fill:#fff}
+.card.shadow .s-ink{stroke:#EDE9FF} .card.shadow .f-ink{fill:#EDE9FF}
+.lbl{font-family:var(--hand); font-size:20px; fill:var(--ink)}
+
+
+/* ---------- chat test ---------- */
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+#app.full{justify-content:flex-start; align-items:stretch; padding-bottom:12px}
+.chat{width:100%; max-width:600px; margin:0 auto; height:100%; display:flex; flex-direction:column; min-height:0}
+.chat-head{display:flex; justify-content:space-between; align-items:center; padding:2px 2px 10px}
+.log{flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding:6px 4px 16px}
+.msg{max-width:84%; padding:10px 14px; border:var(--line) solid var(--ink); border-radius:20px; white-space:pre-wrap; line-height:1.35}
+.msg.bot{align-self:flex-start; background:#fff; color:#26235E; border-bottom-left-radius:4px}
+.msg.bot.q{background:var(--paper-2); color:var(--ink); box-shadow:4px 4px 0 var(--ink); font-size:19px}
+.msg.me{align-self:flex-end; background:var(--sun); color:#26235E; border-bottom-right-radius:4px}
+.msg.typing{opacity:.8; animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.4}}
+.composer{display:flex; gap:10px; align-items:flex-end; border-top:var(--line) solid var(--ink); padding-top:12px}
+.composer textarea{flex:1; resize:none; font:inherit; font-size:18px; color:var(--ink); background:var(--paper-2); border:var(--line) solid var(--ink); padding:10px 12px; min-height:52px; max-height:180px}
+.composer textarea::placeholder{color:var(--ink-2)}
+.err{margin:0; font-size:16px}
+.taps{display:flex; flex-direction:column; gap:10px; width:100%}
+.taps .btn{text-align:left; font-family:var(--hand); font-weight:400; font-size:18px}
+.composer.stack{flex-direction:column; align-items:flex-start}
+/* ---------- result ---------- */
+.result{width:100%; max-width:600px; margin:0 auto; overflow-y:auto; height:100%; display:flex; flex-direction:column; gap:18px; padding:4px 4px 28px}
+.r-hero{background:var(--sun); color:#26235E; border:var(--line) solid var(--ink); box-shadow:6px 6px 0 var(--ink); padding:22px}
+.r-kicker{margin:0; font-size:17px}
+.r-hero h1{font-family:var(--display); font-weight:800; font-size:clamp(30px,8vw,44px); line-height:1.02; margin:4px 0 8px; letter-spacing:-.02em}
+.r-stack{margin:0 0 12px; font-size:17px; color:#4A4680}
+.r-portrait{margin:0; font-size:19px}
+.rcard{background:var(--paper-2); border:var(--line) solid var(--ink); box-shadow:6px 6px 0 var(--ink); padding:18px 20px}
+.rcard h2{font-family:var(--display); font-weight:700; font-size:20px; margin:0 0 8px; letter-spacing:-.01em}
+.rcard p{margin:0}
+.rcard.shadow{background:var(--night); color:#EDE9FF; border-color:var(--night); box-shadow:6px 6px 0 var(--sun)}
+.axis{padding:10px 0; border-top:2px dashed var(--ink-2)}
+.axis:first-of-type{border-top:0; padding-top:0}
+.axis-top b{font-weight:400; color:var(--ink-2)}
+.meter{display:flex; gap:5px; margin:6px 0}
+.meter i{width:28px; height:10px; border:2px solid var(--ink)}
+.meter i.on{background:var(--ink)}
+.axis-q{font-size:16px; margin:2px 0 0 !important}
+.axis-why{font-size:15px; color:var(--ink-2)}
+.note{font-size:15px; color:var(--ink-2); margin-top:10px !important}
+.r-actions{display:flex; gap:12px; flex-wrap:wrap}
+
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important; animation:none !important}
+}
+@media (min-width:760px){
+  .screen{max-width:520px}
+  .caption{font-size:17px}
+}
+</style>
+</head>
+<body>
+<!-- shared SVG defs: halftone patterns -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <pattern id="dots-sun" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="4.5" cy="4.5" r="2.2" fill="#F2BE2E"/></pattern>
+    <pattern id="dots-ink" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.7" fill="#5D5A96"/></pattern>
+    <pattern id="dots-dark" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="3.5" cy="3.5" r="2.4" fill="#26235E"/></pattern>
+  </defs>
+</svg>
+
+<header class="bar">
+  <button class="brand" data-go="intro-1" aria-label="В начало">Игра типов</button>
+  <button class="skip" data-go="test">сразу к тесту</button>
+</header>
+
+<main id="app" aria-live="polite"></main>
+
+<script>
+/* =========================================================
+   CONTENT — для прода вынести в /content/ru.json
+   ========================================================= */
+const ART = {
+  jung: `<svg viewBox="0 0 400 300" role="img" aria-label="Карл Юнг с трубкой">
+    <circle cx="300" cy="90" r="80" fill="url(#dots-sun)"/>
+    <g transform="translate(-75,0)">
+    <path class="s-ink f-paper" d="M120 300 Q130 245 200 240 Q270 245 280 300"/>
+    <path class="s-ink" d="M175 245 L200 275 L225 245"/>
+    <ellipse class="s-ink f-paper" cx="200" cy="140" rx="62" ry="78"/>
+    <path class="f-ink" d="M140 125 Q145 62 200 60 Q258 62 262 125 Q250 92 200 90 Q155 92 140 125Z"/>
+    <circle class="s-ink f-white" cx="178" cy="138" r="17"/><circle class="s-ink f-white" cx="222" cy="138" r="17"/>
+    <path class="s-ink" d="M195 138 h10"/><circle class="f-ink" cx="180" cy="140" r="3.5"/><circle class="f-ink" cx="224" cy="140" r="3.5"/>
+    <path class="f-ink" d="M168 178 Q200 162 232 178 Q216 190 200 182 Q184 190 168 178Z"/>
+    <path class="s-ink" d="M222 192 L282 210"/><rect class="s-ink f-paper" x="276" y="188" width="22" height="28" rx="5"/>
+    <path class="s-ink" d="M290 180 q-12 -14 0 -26 q12 -12 0 -26" style="stroke-width:3"/>
+    </g>
+  </svg>`,
+  four: `<svg viewBox="0 0 400 300" role="img" aria-label="Четыре функции: мышление, чувство, ощущение, интуиция">
+    <rect x="0" y="150" width="200" height="150" fill="url(#dots-sun)" opacity=".7"/>
+    <rect x="200" y="0" width="200" height="150" fill="url(#dots-sun)" opacity=".7"/>
+    <path class="s-ink" d="M200 20 V280 M20 150 H380" style="stroke-width:3"/>
+    <rect class="s-ink f-paper" x="70" y="40" width="60" height="60"/><path class="s-ink" d="M70 100 L130 40 M70 70 H130 M100 40 V100" style="stroke-width:3"/>
+    <text class="lbl" x="100" y="130" text-anchor="middle">думать</text>
+    <path class="s-ink f-white" d="M300 100 C255 70 270 35 300 55 C330 35 345 70 300 100Z"/>
+    <text class="lbl" x="300" y="130" text-anchor="middle">чувствовать</text>
+    <path class="s-ink f-paper" d="M78 255 V205 M92 255 V195 M106 255 V198 M120 255 V208 M70 232 L64 222 M70 232 Q66 268 98 272 Q128 270 128 238 V210"/>
+    <text class="lbl" x="100" y="292" text-anchor="middle" style="font-size:18px">ощущать</text>
+    <path class="s-ink f-white" d="M255 240 Q300 200 345 240 Q300 280 255 240Z"/><circle class="f-ink" cx="300" cy="240" r="11"/>
+    <path class="s-ink" d="M300 195 V178 M270 203 L260 190 M330 203 L340 190" style="stroke-width:3"/>
+    <text class="lbl" x="300" y="292" text-anchor="middle" style="font-size:18px">угадывать</text>
+  </svg>`,
+  flow: `<svg viewBox="0 0 400 300" role="img" aria-label="Энергия наружу и энергия внутрь">
+    <circle cx="110" cy="150" r="95" fill="url(#dots-sun)"/>
+    <circle class="s-ink f-paper" cx="110" cy="120" r="24"/><path class="s-ink f-paper" d="M78 210 Q80 155 110 152 Q140 155 142 210Z"/>
+    <path class="s-ink" d="M150 105 L185 85 M155 150 L195 150 M150 195 L185 215 M70 105 L35 85 M65 150 L25 150 M70 195 L35 215"/>
+    <path class="s-ink" d="M178 80 l8 4 -4 9 M188 146 l8 4 -8 4 M178 220 l8 -4 -4 -9 M42 80 l-8 4 4 9 M32 146 l-8 4 8 4 M42 220 l-8 -4 4 -9" style="stroke-width:3"/>
+    <circle class="s-ink f-paper" cx="300" cy="120" r="24"/><path class="s-ink f-paper" d="M268 210 Q270 155 300 152 Q330 155 332 210Z"/>
+    <path class="s-ink" d="M300 150 m0 -62 a62 62 0 1 1 -50 26 M300 150 m0 -82 a82 82 0 1 0 66 34" style="stroke-width:3" stroke-dasharray="6 9"/>
+    <path class="s-ink" d="M250 114 l2 -10 9 3" style="stroke-width:3"/>
+  </svg>`,
+  shadow: `<svg viewBox="0 0 400 300" role="img" aria-label="Человек и его тень, которая машет рукой">
+    <circle cx="60" cy="50" r="34" class="f-sun"/>
+    <path d="M110 250 L390 250 L392 285 L110 285Z" fill="url(#dots-dark)" opacity=".9"/>
+    <path class="f-ink" d="M125 250 Q220 238 370 228 Q392 226 392 236 Q390 252 370 254 Q240 262 125 262Z" opacity=".95"/>
+    <circle class="f-ink" cx="372" cy="240" r="15"/>
+    <path class="s-ink" d="M340 236 L352 205 M352 205 l-6 -8 M352 205 l2 -10 M352 205 l8 -6" style="stroke-width:3"/>
+    <path d="M364 238 q8 6 16 0" stroke="#F2BE2E" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <circle class="s-ink f-paper" cx="125" cy="128" r="22"/>
+    <path class="s-ink f-paper" d="M98 225 Q100 160 125 155 Q150 160 152 225Z"/>
+    <path class="s-ink" d="M110 225 L108 250 M140 225 L142 250"/>
+    <path class="s-ink" d="M20 250 H400" style="stroke-width:3"/>
+  </svg>`,
+};
+
+const GLYPH = {
+  T: `<svg class="glyph" viewBox="0 0 120 120" aria-hidden="true"><circle cx="70" cy="70" r="46" fill="url(#dots-sun)"/><rect class="s-ink" x="20" y="20" width="70" height="70"/><path class="s-ink" d="M20 90 L90 20 M20 55 H90 M55 20 V90" style="stroke-width:3"/></svg>`,
+  F: `<svg class="glyph" viewBox="0 0 120 120" aria-hidden="true"><circle cx="70" cy="70" r="46" fill="url(#dots-sun)"/><path class="s-ink" d="M55 98 C10 66 22 20 55 40 C88 20 100 66 55 98Z"/></svg>`,
+  S: `<svg class="glyph" viewBox="0 0 120 120" aria-hidden="true"><circle cx="70" cy="70" r="46" fill="url(#dots-sun)"/><path class="s-ink" d="M38 80 V35 M52 80 V24 M66 80 V28 M80 82 V40 M30 62 L24 52 M30 62 Q26 102 58 104 Q88 102 88 70 V40"/></svg>`,
+  N: `<svg class="glyph" viewBox="0 0 120 120" aria-hidden="true"><circle cx="70" cy="70" r="46" fill="url(#dots-sun)"/><path class="s-ink" d="M14 66 Q55 26 96 66 Q55 106 14 66Z"/><circle class="f-ink" cx="55" cy="66" r="10"/><path class="s-ink" d="M55 20 V8 M28 28 L20 18 M82 28 L90 18" style="stroke-width:3"/></svg>`,
+  E: `<svg class="glyph" viewBox="0 0 120 120" aria-hidden="true"><circle cx="70" cy="70" r="46" fill="url(#dots-sun)"/><circle class="s-ink" cx="56" cy="60" r="16"/><path class="s-ink" d="M56 30 V10 M56 90 V110 M26 60 H6 M86 60 H106 M35 39 L22 26 M77 39 L90 26 M35 81 L22 94 M77 81 L90 94" style="stroke-width:3"/></svg>`,
+  I: `<svg class="glyph" viewBox="0 0 120 120" aria-hidden="true"><circle cx="70" cy="70" r="46" fill="url(#dots-sun)"/><path class="s-ink" d="M58 62 a4 4 0 1 1 6 3 a12 12 0 1 1 -16 -12 a20 20 0 1 1 26 24 a30 30 0 1 1 -38 -36 a40 40 0 1 1 52 46"/></svg>`,
+  Sh: `<svg class="glyph" viewBox="0 0 120 120" aria-hidden="true"><circle cx="78" cy="40" r="28" fill="#F2BE2E"/><circle class="s-ink" cx="38" cy="42" r="12"/><path class="s-ink" d="M24 92 Q26 60 38 58 Q50 60 52 92"/><path d="M52 96 Q80 92 112 86 Q118 94 112 100 Q80 106 52 104Z" fill="#6C66A8"/><circle cx="110" cy="92" r="7" fill="#6C66A8"/><path d="M104 94 q6 4 12 0" stroke="#F2BE2E" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>`,
+};
+
+const INTRO = [
+  { art: ART.jung, caption: "Цюрих, начало XX века. Карл Густав Юнг разругался с Фрейдом и ушёл изучать собственное бессознательное.",
+    bubble: "Кажется, у каждого внутри своя операционная система.", pos: "right:4%; bottom:8%", tail: "tail-tl" },
+  { art: ART.four, caption: "Он заметил: мир можно брать в руки четырьмя способами.",
+    bubble: null, narr: "Один сначала думает. Другой сначала чувствует, моё это или нет. Третий трогает, нюхает и смотрит. Четвёртый просто знает — и не может объяснить откуда." },
+  { art: ART.flow, caption: "А ещё у жизненной энергии есть направление.",
+    bubble: "Пойдём к людям!", pos: "left:4%; bottom:4%", tail: "tail-tl",
+    bubble2: "А я — к себе.", pos2: "right:4%; bottom:4%", tail2: "tail-tl" },
+  { art: ART.shadow, caption: "И то, что мы в себе не замечаем, играет за нашей спиной.",
+    bubble: "Привет. Я тоже ты.", pos: "right:5%; top:22%", tail: "tail-br",
+    narr: "Юнг не считал это поводом для паники. Скорее правилами игры, которые никто не выдал при рождении. Давай хотя бы посмотрим на фигуры." },
+];
+
+const DECK = [
+  { g:"T", name:"Мышление", lead:"Сначала логика, потом всё остальное.",
+    body:"Оценивает мир через «верно — неверно»: причины, структуры, последовательность. Экстравертное мышление наводит порядок вокруг — таблицы, правила, планы. Интровертное строит модели в голове и может годами их шлифовать.",
+    life:"«Подожди, давай по пунктам»." },
+  { g:"F", name:"Чувство", lead:"Сначала ценность: моё это или нет.",
+    body:"Не путать с эмоциями. Чувство у Юнга — это суждение, только мерило не истина, а ценность: важно, неважно, приемлемо, нет. Экстравертное считывает атмосферу в комнате за секунду. Интровертное держит тихий, но несгибаемый внутренний компас.",
+    life:"«Технически ты прав. Но так нельзя»." },
+  { g:"S", name:"Ощущение", lead:"Что есть прямо здесь.",
+    body:"Воспринимает факты, детали, фактуру, вкус, тело. Экстравертное живёт в моменте и замечает всё — от новой стрижки до трещины на чашке. Интровертное собирает очень личные, глубокие впечатления от вещей и хранит их годами.",
+    life:"«Ты видел, какой там был свет?»" },
+  { g:"N", name:"Интуиция", lead:"Что может быть.",
+    body:"Видит сквозь вещи: возможности, связи, смыслы, будущее. Экстравертная ловит идеи в мире и запускает три проекта с понедельника. Интровертная получает образы и предчувствия изнутри — иногда раньше, чем это становится удобно.",
+    life:"«Не знаю почему, но это сработает»." },
+  { g:"E", name:"Экстраверсия", lead:"Энергия течёт наружу.",
+    body:"Не про громкость и не про количество друзей. Для экстраверта главное — то, что вовне: люди, события, факты. Он заряжается в контакте и думает, пока говорит.",
+    life:"«Давай созвонимся, так быстрее»." },
+  { g:"I", name:"Интроверсия", lead:"Энергия течёт внутрь.",
+    body:"Не про стеснительность. Для интроверта решает не сам объект, а внутренняя реакция на него. Он заряжается в тишине и сначала думает, потом говорит — иногда через неделю.",
+    life:"«Мне надо это переварить»." },
+  { g:"Sh", name:"Тень", shadow:true, lead:"Всё, что мы не пустили в дом.",
+    body:"В типологии тень — это низшая функция, противоположная твоей сильной. Почти не под контролем и вылезает в стрессе: логик вдруг рыдает над рекламой, мечтатель-интуит в панике пересчитывает носки. Юнг считал, что именно через тень приходит рост.",
+    life:"«Это был не я»." },
+  { finale:true, name:"Теперь ты", lead:"",
+    body:"У каждого есть все четыре функции. Вопрос в том, какая ведёт, куда течёт энергия и где прячется тень. Восемь базовых сочетаний, а с опорной функцией — шестнадцать. Какое твоё, покажет тест." },
+];
+
+const ECO = [
+  { href:"https://www.pranaway.art/", label:"Дыхательные практики" },
+  { href:"https://www.pranaway.art/motivation-sait/", label:"Карточки состояний" },
+];
+
+/* =========================================================
+   APP
+   ========================================================= */
+const app = document.getElementById("app");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function go(route){ if(location.hash.slice(1)===route) render(); else location.hash = route; }
+document.addEventListener("click", e=>{
+  const t = e.target.closest("[data-go]"); if(t){ e.preventDefault(); go(t.dataset.go); }
+});
+addEventListener("hashchange", render);
+
+function render(){
+  app.classList.remove("full");
+  const r = location.hash.slice(1) || "intro-1";
+  const [kind, n] = r.split("-"); const i = Math.max(1, parseInt(n)||1);
+  if(kind==="deck") return renderDeck(Math.min(i, DECK.length));
+  if(kind==="test") return renderTest();
+  return renderIntro(Math.min(i, INTRO.length));
+}
+
+function bubble(text,pos,tail){ return text ? `<div class="bubble ${tail}" style="${pos}">${text}</div>` : ""; }
+
+function renderIntro(i){
+  const p = INTRO[i-1], last = i===INTRO.length;
+  const next = last ? "deck-1" : `intro-${i+1}`;
+  app.innerHTML = `
+  <section class="screen" aria-label="Предыстория, кадр ${i} из ${INTRO.length}">
+    <div class="panel" data-go="${next}" role="button" tabindex="0" aria-label="Следующий кадр">
+      <div class="caption">${p.caption}</div>
+      ${p.art}
+      ${bubble(p.bubble,p.pos,p.tail)}${bubble(p.bubble2,p.pos2,p.tail2)}
+    </div>
+    ${p.narr ? `<p class="narr">${p.narr}</p>` : ""}
+    <div class="row">
+      <div class="pips" aria-hidden="true">${INTRO.map((_,k)=>`<span class="pip ${k<i?'on':''}"></span>`).join("")}</div>
+      <button class="btn" data-go="${next}">${last ? "Смотреть фигуры" : "Дальше"}</button>
+    </div>
+  </section>`;
+  app.querySelector(".panel").addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(next);} });
+}
+
+function cardHTML(c, cls){
+  if(c.finale) return `<article class="card finale ${cls}">
+      <h2>${c.name}</h2><p class="body">${c.body}</p>
+      <button class="btn" data-go="test">Пройти тест</button></article>`;
+  return `<article class="card ${c.shadow?'shadow':''} ${cls}">
+      ${GLYPH[c.g]}<h2>${c.name}</h2><p class="lead"><span>${c.lead}</span></p>
+      <p class="body">${c.body}</p><p class="life"><b>в жизни:</b> ${c.life}</p></article>`;
+}
+
+function renderDeck(i){
+  const cur = DECK[i-1], n1 = DECK[i], n2 = DECK[i+1];
+  app.innerHTML = `
+  <section class="screen" aria-label="Фигуры игры, карточка ${i} из ${DECK.length}">
+    <div class="deck">
+      ${n2 ? cardHTML(n2,"behind-2") : ""}${n1 ? cardHTML(n1,"behind-1") : ""}${cardHTML(cur,"top")}
+    </div>
+    <div class="row">
+      <button class="btn ghost" ${i===1?'disabled':''} data-go="deck-${i-1}" aria-label="Предыдущая карточка">Назад</button>
+      <span class="count">${i} из ${DECK.length}</span>
+      ${i<DECK.length ? `<button class="btn" id="nextBtn">Дальше</button>` : `<span style="width:96px"></span>`}
+    </div>
+    ${i===1 ? `<p class="hint">Листай карточки пальцем или стрелками</p>` : ""}
+  </section>`;
+  const top = app.querySelector(".card.top");
+  const nb = document.getElementById("nextBtn");
+  if(nb) nb.onclick = ()=>fly(top,-1,i);
+  dragify(top,i);
+}
+
+function fly(card,dir,i){
+  const target = dir<0 ? i+1 : i-1;
+  if(target<1 || target>DECK.length) return snap(card);
+  if(reduce) return go(`deck-${target}`);
+  card.classList.add("anim");
+  card.style.transform = `translateX(${dir*130}%) rotate(${dir*14}deg)`;
+  card.style.opacity = "0";
+  setTimeout(()=>go(`deck-${target}`), 240);
+}
+function snap(card){ card.classList.add("anim"); card.style.transform=""; }
+
+function dragify(card,i){
+  let x0=null, dx=0;
+  card.addEventListener("pointerdown", e=>{
+    if(e.target.closest("button")) return;
+    x0=e.clientX; dx=0; card.classList.remove("anim"); card.classList.add("drag");
+    card.setPointerCapture(e.pointerId);
+  });
+  card.addEventListener("pointermove", e=>{
+    if(x0===null) return; dx=e.clientX-x0;
+    card.style.transform=`translateX(${dx}px) rotate(${dx/22}deg)`;
+  });
+  const end=()=>{
+    if(x0===null) return; x0=null; card.classList.remove("drag");
+    if(dx<-80) fly(card,-1,i); else if(dx>80) fly(card,1,i); else snap(card);
+  };
+  card.addEventListener("pointerup", end); card.addEventListener("pointercancel", end);
+}
+
+addEventListener("keydown", e=>{
+  if(!location.hash.startsWith("#deck")) return;
+  const i = parseInt(location.hash.split("-")[1])||1, top=app.querySelector(".card.top");
+  if(e.key==="ArrowRight") fly(top,-1,i);
+  if(e.key==="ArrowLeft") fly(top,1,i);
+});
+
+/* =========================================================
+   ТЕСТ В РЕЖИМЕ ЧАТА
+   ========================================================= */
+const QUESTIONS = [
+  { axis:"EI", text:"Пятница, вечер, неделя выжала досуха. Как выглядит идеальное восстановление: что делаешь, где и с кем?" },
+  { axis:"EI", text:"Когда нужно разобраться в сложной мысли или проблеме, что ты делаешь первым делом? Проговариваешь с кем-то или сначала уходишь в себя? Вспомни пример." },
+  { axis:"SN", text:"Опиши место, где недавно был(а), так, будто рассказываешь другу, который там не был." },
+  { axis:"SN", text:"Что тебя больше цепляет: как вещи устроены сейчас или какими они могли бы стать? Расскажи про идею, проект или тему, от которой у тебя загораются глаза." },
+  { axis:"TF", text:"Друг показывает проект, в который вложил душу, а ты видишь в нём серьёзную ошибку. Что скажешь и как?" },
+  { axis:"TF", text:"Вспомни непростое решение за последнее время. Что в итоге перевесило и почему?" },
+  { axis:"JP", text:"Через неделю поездка. Как выглядит твоя подготовка?" },
+  { axis:"JP", text:"Как у тебя с дедлайнами и незакрытыми делами? И что с тобой происходит, когда план внезапно ломается?" },
+  { axis:"SH", text:"Последний: вспомни момент, когда стресс выбил тебя из колеи. Что ты делал(а) такого, чего обычно не делаешь?" },
+];
+const GREET = [
+  "Привет. Будет 9 вопросов: про отдых, решения, планы и пару жизненных ситуаций.",
+  "Отвечай своими словами, как другу. Пара-тройка предложений и пример из жизни скажут больше любой теории.",
+  "Правильных ответов нет. Поехали.",
+];
+const REACT = ["Записано.", "Ага, понятно.", "Принято, идём дальше.", "Интересно.", "Хорошо.", "Так.", "Есть.", "Понял."];
+
+const FN  = { S:"ощущение", N:"интуиция", T:"мышление", F:"чувство" };
+const ADJ = (f,a)=> (a==="e" ? "экстравертн" : "интровертн") + (f==="N" ? "ая" : "ое");
+const TITLES = {
+  "Ni-Te":"Стратег-провидец","Ni-Fe":"Тихий провидец","Ne-Ti":"Генератор возможностей","Ne-Fi":"Искра",
+  "Ti-Ne":"Конструктор идей","Ti-Se":"Мастер на месте","Te-Ni":"Полководец","Te-Si":"Организатор",
+  "Fi-Ne":"Мечтатель с компасом","Fi-Se":"Тихий эстет","Fe-Ni":"Вдохновитель","Fe-Si":"Связующий",
+  "Si-Te":"Опора","Si-Fe":"Хранитель","Se-Ti":"Игрок момента","Se-Fi":"Живой огонь",
+};
+const POLES = {
+  EI:{E:"энергия наружу", I:"энергия внутрь", name:"Энергия"},
+  SN:{S:"факты и детали", N:"смыслы и возможности", name:"Восприятие"},
+  TF:{T:"логика и критерии", F:"ценности и люди", name:"Решения"},
+  JP:{J:"план и завершённость", P:"поток и открытые варианты", name:"Внешний мир"},
+};
+
+function stackOf(code){
+  const [ei,sn,tf,jp] = code.split("");
+  const ext = jp==="J" ? tf : sn, int = jp==="J" ? sn : tf;
+  const dom = ei==="E" ? ext+"e" : int+"i", aux = ei==="E" ? int+"i" : ext+"e";
+  const opp = {S:"N",N:"S",T:"F",F:"T"};
+  const inf = opp[dom[0]] + (dom[1]==="e" ? "i" : "e");
+  const nm = f => ADJ(f[0],f[1]) + " " + FN[f[0]];
+  return { dom, aux, inf, domName:nm(dom), auxName:nm(aux), infName:nm(inf),
+           title: TITLES[`${dom[0]}${dom[1]}-${aux[0]}${aux[1]}`] || "Твой тип" };
+}
+
+/* ---------- state (сохраняется между перезагрузками) ---------- */
+const KEY = "igra-tipov:local:v1";
+let T = load() || fresh();
+function fresh(){ return { step:0, nudged:false, answers:Array(QUESTIONS.length).fill(""), taps:[], msgs:[], phase:"chat", result:null, error:null }; }
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(T)); }catch(e){} }
+
+/* =========================================================
+   ЛОКАЛЬНАЯ ВЕРСИЯ: разбор без интернета и без ИИ
+   ========================================================= */
+const TAPS = [
+  [["E","С людьми и в движении"],["I","Один, в тишине"]],
+  [["E","Сначала проговариваю"],["I","Сначала обдумываю сам"]],
+  [["S","Помню конкретные детали"],["N","Помню атмосферу и впечатление"]],
+  [["S","Как устроено сейчас"],["N","Каким могло бы стать"]],
+  [["T","Скажу прямо, по делу"],["F","Сначала подумаю, как он это примет"]],
+  [["T","Перевесили аргументы и логика"],["F","Перевесило: так правильно для меня и близких"]],
+  [["J","Заранее, по списку"],["P","Ближе к делу, как пойдёт"]],
+  [["J","Закрываю дела, сломанный план бесит"],["P","Много открытого, план легко меняю"]],
+];
+const MARK = {
+  E:["друз","компан","вечеринк","тусов","встреч","созвон","звоню","обсужд","вслух","проговар","с кем-то","с людьми","гулять","клуб","выбираюсь","движ","спорт","актив"],
+  I:["один","одна","дома","тишин","книг","медит","в себе","в себя","сам с","сама с","уедин","кресл","плед","обдумыва","размышл","зарисов","записыва","дневник","наедине"],
+  S:["цвет","запах","вкус","звук","деревян","кирпич","мягк","холодн","конкретн","факт","как есть","проверен","инструкц","по шагам","практичн","детал","метр","столик","меню","цена"],
+  N:["атмосфер","словно","как будто","смысл","иде","возможн","могли бы","могло бы","будущ","представ","образ","визуализ","вдохнов","концепц","творческ","мечт","если бы","связ","редактур","улучш","дорабо"],
+  T:["логик","ошибк","прямо","факт","аргумент","эффектив","результат","выгод","рацион","анализ","критери","по делу","объективн","плюсы","минусы","расч","целесообраз"],
+  F:["чувств","хочет ли","обид","бережн","поддерж","важно для","ценност","отношен","сердц","душ","гармон","такт","спрош","близк","людям","помога","заботи"],
+  J:["заранее","план","список","за три дня","за неделю","в срок","порядок","подготов","расписан","заверш","всё готово","документ"],
+  P:["в последний момент","спонтан","по ходу","импровиз","незакрыт","незаверш","ломаются","не всегда","50/50","как пойдёт","гибк","откладыв","накануне","много дел"],
+};
+/* стресс-маркеры низшей функции -> какая функция ведёт */
+const GRIP = {
+  Ni:["печен","сладк","хрус","сигарет","кур","алкогол","выпи","сериал","шопинг","покуп","лежать","залип","переед","ем ","есть "],
+  Si:["катастроф","худш","накручив","паник","всё пропало","сценари"],
+  Se:["бессмыслен","предчувств","знак","мрачн","подозрева"],
+  Ne:["симптом","болезн","здоров","зацикл","одержим","по кругу","мелоч"],
+  Ti:["сорвал","плак","не ценят","вспыл","эмоци","истерик"],
+  Te:["никто не понимает","сентимент","обидно","ненужн","жалко себя"],
+  Fi:["контрол","критик","жёстк","жестк","навожу порядок","раздраж","командов","всё не так"],
+  Fe:["холодн","придир","логически разбир","отстран"],
+};
+const C = (title,text)=>({title,text});
+const DOM = {
+  Ni:{portrait:"Ты видишь, куда всё движется, раньше, чем это становится очевидным. Ответы приходят образами, снами, внезапным «знаю».",
+    power:C("Видеть сквозь","Ты замечаешь не то, что есть, а то, чем это станет. Из разрозненных фактов складываешь одну картину и держишь курс, даже когда не можешь объяснить его логикой. Образы и сны для тебя рабочие данные, а не мистика."),
+    hard:C("Довести до формы","Итог ты видишь, а путь к нему — рутинные конкретные шаги, территория слабой функции. Поэтому идеи копятся незавершёнными: картина уже сложилась в голове, и интерес уходит раньше, чем дело доделано руками."),
+    solve:C("Каркас снаружи","Видение рождай как привык: в тишине, на бумаге, в образах. Исполнение отдавай внешней структуре — человеку, которому сдаёшь результат, дате показа, группе. Обязательство перед кем-то работает лучше силы воли."),
+    challenge:C("Из образа в материю","Главный вызов — проводить образ до воплощения и возвращаться в тело и момент. Смотри на свои дела как на чужой проект: что здесь лишнее и какой минимальный шаг сделает его готовым."),
+    line:"Сначала вижу, потом делаю."},
+  Ne:{portrait:"Ты генератор: в любой ситуации видишь десять вариантов развития и загораешься от каждого. Мир для тебя — поле возможностей.",
+    power:C("Связывать несвязуемое","Ты на лету находишь связи между идеями, людьми и темами, которые другие считают несовместимыми. Мозговой штурм с тобой — фейерверк. Ты чувствуешь потенциал раньше всех и умеешь заражать им."),
+    hard:C("Остаться и доделать","Новое манит сильнее, чем доделывание старого. Рутина, повторения и детали быстро гасят энергию, и проекты остаются на стадии блестящего начала."),
+    solve:C("Короткие спринты","Дели большое на короткие рывки с видимым результатом и ищи партнёра, который любит доводить. Записывай идеи в одно место, чтобы не держать их в голове и не бросаться на каждую сразу."),
+    challenge:C("Выбрать одну дверь","Вызов — выбрать одну возможность и прожить её до конца, не испугавшись, что остальные закроются. Глубина не отменяет свободу, она делает её настоящей."),
+    line:"У меня есть идея. И ещё девять."},
+  Si:{portrait:"Ты опираешься на опыт: помнишь, как было, что сработало и как это ощущалось. Рядом с тобой надёжно.",
+    power:C("Память и надёжность","Ты хранишь детали, традиции и проверенные способы. Тебе можно доверить важное: сделаешь как надо, вовремя и аккуратно. Ты тонко чувствуешь своё тело и состояние."),
+    hard:C("Неизвестность","Резкие перемены и туманные «а давай попробуем» выбивают почву. Когда нет опоры на опыт, тревога рисует худшие сценарии."),
+    solve:C("Маленькие пробы","Знакомься с новым через небольшие безопасные эксперименты: один шаг, потом оценка. Так новое становится опытом, а опыт — твоя сильная сторона."),
+    challenge:C("Открыться возможному","Вызов — разрешать себе неизвестное, не дожидаясь гарантий. То, что работало раньше, — опора, а не потолок."),
+    line:"Я помню, как надо. И это работает."},
+  Se:{portrait:"Ты живёшь в моменте и мгновенно реагируешь на то, что происходит. Мир для тебя — вкус, движение, действие.",
+    power:C("Здесь и сейчас","Ты замечаешь всё — детали, людей, перемены обстановки — и действуешь быстрее, чем другие успевают подумать. В кризисе ты собран, в жизни ярок."),
+    hard:C("Длинная дистанция","Долгосрочные планы и абстрактные «зачем» кажутся пустыми, пока результат не виден. Скука — твой главный враг."),
+    solve:C("Через действие","Пробуй руками, а не в теории. Ставь близкие, осязаемые цели и связывай их с большой целью цепочкой видимых шагов."),
+    challenge:C("Услышать смысл","Вызов — остановиться и спросить, куда ведёт этот путь. Интуиция у тебя есть, ей просто нужна тишина, чтобы заговорить."),
+    line:"Меньше слов, больше жизни."},
+  Ti:{portrait:"Ты хочешь понять, как всё устроено на самом деле. Твоя голова — мастерская точных моделей.",
+    power:C("Точность мысли","Ты видишь несостыковки, которые другие пропускают, и строишь ясные внутренние системы. Тебя не обманешь красивыми словами."),
+    hard:C("Люди и эмоции","Чужие чувства кажутся нелогичными, а свои — неудобными. Отношения требуют того, что не уложишь в модель."),
+    solve:C("Объясни вслух","Проговаривай свои модели другим людям: это и проверка, и мост. Ставь срок, после которого «достаточно точно» становится «готово»."),
+    challenge:C("Тепло без формул","Вызов — признавать чувства как данные, а не как помеху. Иногда точнее спросить «как ты?», чем разобрать проблему."),
+    line:"Сначала пойму. Потом поверю."},
+  Te:{portrait:"Ты превращаешь хаос в работающую систему. Цель, план, ресурсы — и вперёд.",
+    power:C("Чтобы работало","Ты быстро видишь, что неэффективно, и наводишь порядок: процессы, сроки, решения. Рядом с тобой проекты доходят до финиша."),
+    hard:C("Свои чувства","Внутренние переживания ты откладываешь на потом, а потом они накрывают разом. Не всё в жизни измеряется результатом."),
+    solve:C("Метрики плюс смысл","Ставь цели не только по эффективности, но и по тому, что для тебя ценно. Планируй отдых как важную задачу."),
+    challenge:C("Слушать себя","Вызов — замечать, чего хочешь ты сам, а не что «надо». Твоя система станет сильнее, когда в ней появится место для тебя."),
+    line:"Есть план. И он работает."},
+  Fi:{portrait:"Ты сверяешь всё с внутренним компасом: важно не то, что принято, а то, что правда для тебя.",
+    power:C("Внутренний компас","Ты точно чувствуешь, где настоящее, а где фальшь. Не продаёшь свои ценности и умеешь глубоко сопереживать тем, кто рядом."),
+    hard:C("Внешний порядок","Сроки, правила, отчёты и критика даются тяжело: кажется, что система не видит человека."),
+    solve:C("Ценность как мотор","Связывай задачи с тем, что для тебя по-настоящему важно, — тогда находятся силы. Для рутины договорись с кем-то о внешних сроках."),
+    challenge:C("Показать миру","Вызов — переводить внутреннее в действия и слова, понятные другим. Твои ценности ничего не теряют, когда становятся видимыми."),
+    line:"Я выбираю то, что правда для меня."},
+  Fe:{portrait:"Ты чувствуешь людей и атмосферу и умеешь сделать так, чтобы всем было хорошо вместе.",
+    power:C("Чувство людей","Ты считываешь настроение группы за секунду и знаешь, что сказать, чтобы стало теплее. Вокруг тебя складываются сообщества."),
+    hard:C("Свои границы","Чужие ожидания звучат громче собственных желаний. Конфликты и холодная критика выбивают из колеи."),
+    solve:C("Сначала себя","Прежде чем отвечать на просьбу, спроси себя, хочешь ли ты этого. Решения проверяй на бумаге: плюсы, минусы, последствия."),
+    challenge:C("Холодный разум","Вызов — разрешать себе неудобную правду и логику, даже если кому-то это не понравится. Забота включает честность."),
+    line:"Вместе — значит по-настоящему."},
+};
+const AUX = {
+  Ni:C("Интуиция за кадром","Ты видишь, куда ведут твои действия, и выбираешь путь, который выдержит время. Предчувствие помогает не распыляться."),
+  Ne:C("Свежий взгляд","Идеи и возможности дополняют твою сильную сторону: ты не застреваешь в одном решении и видишь альтернативы."),
+  Si:C("Опора на опыт","Ты помнишь, что сработало раньше, и не повторяешь ошибок. Это заземляет твою главную силу."),
+  Se:C("Контакт с моментом","Ты чувствуешь реальность здесь и сейчас и быстро переходишь к делу, а не только думаешь."),
+  Ti:C("Точная проверка","Внутренняя логика помогает проверять идеи на прочность и не верить на слово."),
+  Te:C("Умение реализовать","Ты превращаешь задуманное в план и результат. Видение получает руки."),
+  Fi:C("Свои ценности","Внутренний компас подсказывает, что из всего возможного действительно твоё."),
+  Fe:C("Чувство людей","Твоя сила обращена к людям: ты учитываешь, как решения скажутся на других, и легко находишь общий язык. С командой твоя система держится лучше всего."),
+};
+const INF = {
+  Se:C("Тело берёт своё","Пока ты живёшь в образах и будущем, тело ждёт. В стрессе оно перехватывает руль: еда, хрустящее, сигарета, сериалы, лежать без сил. Это сигнал, что ты слишком долго был «в голове». Дай телу место в расписании, пока оно не потребовало его само."),
+  Si:C("Застревание в деталях","В стрессе ты вдруг зацикливаешься на мелочах и теле: симптомы, мелкие ошибки, одно и то же по кругу. Тень просит не новых идей, а простого ухода за собой: сон, еда, порядок."),
+  Ne:C("Худшие сценарии","В стрессе воображение рисует катастрофы: всё, что может пойти не так, и всё сразу. Это тень возможностей. Помогает вернуться к фактам: что известно точно прямо сейчас?"),
+  Ni:C("Мрачные предчувствия","Когда ресурс кончается, приходит тяжёлое «всё бессмысленно» и подозрение, что за всем скрыт плохой смысл. Это тень интуиции. Тишина и разговор о смыслах в спокойные дни — лучшая профилактика."),
+  Fe:C("Эмоциональный прорыв","Обычно ты в голове, но в стрессе чувства прорываются разом: обида, ощущение, что тебя не ценят, вспышки. Тень просит признать связи с людьми, а не провести ещё один анализ."),
+  Fi:C("Нахлынувшие чувства","В стрессе отложенные переживания накрывают: обида, «никто не понимает», сентиментальность. Тень — твой внутренний мир, которому нужно регулярное внимание, а не авральное."),
+  Te:C("Жёсткий контроль","В стрессе ты вдруг становишься резким критиком и контролёром: всё не так, всё надо переделать. Это тень логики. Помогает один маленький конкретный план вместо войны с миром."),
+  Ti:C("Холодный критик","В стрессе ты внезапно холоден и придирчив: ищешь ошибки в себе и других. Тень просит не войны, а спокойного разбора по пунктам наедине."),
+};
+const WHY = { E:"Энергию берёшь в контакте и движении.", I:"Энергию восстанавливаешь наедине с собой.",
+  S:"Опираешься на конкретику и детали.", N:"Тебя ведут смыслы и возможности.",
+  T:"Решаешь по логике и критериям.", F:"Решаешь с оглядкой на ценности и людей.",
+  J:"Предпочитаешь план и завершённость.", P:"Предпочитаешь открытые варианты и поток." };
+
+function hits(text, list){ const t=" "+text.toLowerCase().replace(/ё/g,"е")+" "; return list.filter(m=>t.includes(m.replace(/ё/g,"е"))); }
+function quoteFor(answers, markers){
+  for(const a of answers){ for(const sent of a.split(/(?<=[.!?…])\s+|,\s+/)){ if(hits(sent,markers).length) return sent.trim().split(/\s+/).slice(0,12).join(" "); } }
+  return "";
+}
+function localAnalyze(){
+  const AX = ["EI","SN","TF","JP"], score = {}, own = {};
+  AX.forEach(k=>{ score[k]=0; own[k]=[]; });
+  QUESTIONS.forEach((q,i)=>{
+    const a = T.answers[i]||"";
+    AX.forEach(k=>{
+      const w = q.axis===k ? 1 : 0.5;            // свой вопрос весит больше
+      score[k] += w*(hits(a,MARK[k[0]]).length - hits(a,MARK[k[1]]).length);
+      if(q.axis===k) own[k].push(a);
+    });
+    const tap = T.taps[i]; if(tap){ const k = AX.find(x=>x.includes(tap)); score[k] += tap===k[0] ? 2 : -2; }
+  });
+  let code = AX.map(k=> score[k]>0 ? k[0] : score[k]<0 ? k[1] : k[1]).join("");
+  // проверка по стрессу: низшая функция подсказывает ведущую
+  const g = Object.entries(GRIP).map(([d,l])=>[d,hits(T.answers[8]||"",l).length]).sort((a,b)=>b[1]-a[1])[0];
+  let gripNote = "";
+  if(g && g[1]>0){
+    const dom = g[0];
+    const cands = ["E","I"].flatMap(e=>["S","N"].flatMap(s=>["T","F"].flatMap(t=>["J","P"].map(j=>e+s+t+j)))).filter(c=>stackOf(c).dom===dom);
+    const cost = c => AX.reduce((sum,k,i)=> sum + (c[i]===code[i] ? 0 : Math.abs(score[k])+0.5), 0);
+    const best = cands.sort((a,b)=>cost(a)-cost(b))[0];
+    if(best && cost(best) <= 3.5 && best!==code){ gripNote = "Тип уточнён по ответу о стрессе."; code = best; }
+  }
+  const axes = {};
+  AX.forEach((k,i)=>{
+    const pole = code[i], s = Math.abs(score[k]);
+    axes[k] = { pole, strength: s>=4 ? 3 : s>=2 ? 2 : 1, quote: quoteFor(own[k], MARK[pole]), why: WHY[pole] };
+  });
+  const total = AX.reduce((s,k)=>s+Math.abs(score[k]),0);
+  axes.confidence = total>=14 ? "высокая" : total>=7 ? "средняя" : "низкая";
+  const st = stackOf(code), d = DOM[st.dom.slice(0,1)+st.dom.slice(1)] || DOM[st.dom];
+  const key = st.dom[0]+st.dom[1];
+  const D = DOM[key];
+  const cards = { portrait:D.portrait, power:D.power, support:AUX[st.aux[0]+st.aux[1]], shadow:INF[st.inf[0]+st.inf[1]],
+    hard:D.hard, solve:D.solve, challenge:D.challenge, line:D.line };
+  return { code, axes, cards, gripNote, at:Date.now() };
+}
+
+/* ---------- журнал прохождений на этом компьютере ---------- */
+const LOG = "igra-tipov:journal:v1";
+function journal(){ try{ return JSON.parse(localStorage.getItem(LOG))||[]; }catch(e){ return []; } }
+function addJournal(r){ try{ const j=journal(); j.push({ at:new Date(r.at).toLocaleString("ru-RU"), code:r.code, title:stackOf(r.code).title, answers:T.answers }); localStorage.setItem(LOG, JSON.stringify(j)); }catch(e){} }
+async function saveFile(name, blob){
+  try{
+    const dl = window.claude?.use ? await window.claude.use("downloads") : null;
+    if(dl){ await dl.save({ filename:name, data:blob }); return; }
+  }catch(e){ return; }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+}
+function downloadCSV(){
+  const q = s => '"'+String(s).replace(/"/g,'""')+'"';
+  const rows = [["Дата","Тип","Ведущая","Опора", ...QUESTIONS.map((_,i)=>"Ответ "+(i+1))].map(q).join(";")];
+  journal().forEach(e=>{ const st=stackOf(e.code); rows.push([e.at, e.title, st.domName, st.auxName, ...e.answers].map(q).join(";")); });
+  const blob = new Blob(["\ufeff"+rows.join("\n")], {type:"text/csv;charset=utf-8"});
+  saveFile("igra-tipov-zhurnal.csv", blob);
+}
+
+/* ---------- UI ---------- */
+function renderTest(){
+  app.classList.add("full");
+  if(T.phase==="result" && T.result) return renderResult();
+  app.innerHTML = `
+  <section class="chat" aria-label="Тест">
+    <div class="chat-head">
+      <span class="count">${T.phase==="chat" ? `Вопрос ${Math.min(T.step+1,QUESTIONS.length)} из ${QUESTIONS.length}` : "Разбор ответов"}</span>
+      <button class="skip" id="restart">начать заново</button>
+    </div>
+    <div class="log" id="log" role="log" aria-live="polite"></div>
+    <div class="composer" id="composer"></div>
+  </section>`;
+  document.getElementById("restart").onclick = restart;
+  if(!T.msgs.length){ GREET.forEach(t=>T.msgs.push({from:"bot",text:t})); T.msgs.push({from:"bot",text:QUESTIONS[0].text,q:true}); save(); }
+  drawLog(); drawComposer();
+}
+
+function drawLog(){
+  const log = document.getElementById("log"); if(!log) return;
+  log.innerHTML = T.msgs.map(m=>`<div class="msg ${m.from} ${m.q?'q':''}"></div>`).join("");
+  [...log.children].forEach((el,i)=>{ el.textContent = T.msgs[i].text; });
+  if(T.phase==="analyzing") log.insertAdjacentHTML("beforeend", `<div class="msg bot typing" id="status">${T.status||"Читаю ответы…"}</div>`);
+  log.scrollTop = log.scrollHeight;
+}
+
+function drawComposer(){
+  const c = document.getElementById("composer"); if(!c) return;
+  c.classList.toggle("stack", T.phase==="error");
+  if(T.phase==="chat"){
+    c.innerHTML = `<label class="sr" for="ans">Твой ответ</label>
+      <textarea id="ans" rows="2" placeholder="Своими словами…"></textarea>
+      <button class="btn" id="send">Ответить</button>`;
+    const ta = c.querySelector("textarea");
+    ta.addEventListener("input", ()=>{ ta.style.height="auto"; ta.style.height=Math.min(ta.scrollHeight,180)+"px"; });
+    ta.addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey && !matchMedia("(pointer:coarse)").matches){ e.preventDefault(); send(); } });
+    c.querySelector("#send").onclick = send;
+    ta.focus({preventScroll:true});
+  } else if(T.phase==="tap"){
+    c.innerHTML = `<div class="taps">${TAPS[T.step].map((t,i)=>`<button class="btn ghost tap" data-i="${i}">${t[1]}</button>`).join("")}</div>`;
+    c.querySelectorAll(".tap").forEach(b=>b.onclick=()=>pickTap(+b.dataset.i));
+  } else if(T.phase==="error"){
+    c.innerHTML = `<p class="err">${T.error}</p><button class="btn" id="retry">Запустить разбор ещё раз</button>`;
+    c.querySelector("#retry").onclick = analyze;
+  } else c.innerHTML = "";
+}
+
+function botSay(text, extra={}){ T.msgs.push({from:"bot", text, ...extra}); save(); drawLog(); }
+
+function send(){
+  const ta = document.getElementById("ans"); const v = ta.value.trim(); if(!v) return;
+  T.msgs.push({from:"me", text:v});
+  T.answers[T.step] = (T.answers[T.step] ? T.answers[T.step]+" " : "") + v;
+  ta.value = ""; ta.style.height = "auto"; save(); drawLog();
+  const words = T.answers[T.step].split(/\s+/).length;
+  setTimeout(()=>{
+    if(words < 7 && !T.nudged){ T.nudged = true; botSay("Можно чуть подробнее? Пример из жизни очень помогает."); return; }
+    T.nudged = false;
+    if(TAPS[T.step]){ T.phase="tap"; save(); botSay("И коротко: что ближе?"); drawComposer(); return; }
+    advance();
+  }, reduce ? 0 : 350);
+}
+function pickTap(i){
+  const [pole,label] = TAPS[T.step][i];
+  T.taps[T.step] = pole; T.msgs.push({from:"me", text:label}); T.phase="chat"; save(); drawLog(); drawComposer();
+  setTimeout(advance, reduce ? 0 : 300);
+}
+function advance(){
+  { T.step++;
+    if(T.step < QUESTIONS.length){
+      botSay(REACT[(T.step-1) % REACT.length]);
+      setTimeout(()=>{ botSay(QUESTIONS[T.step].text, {q:true}); refreshHead(); }, reduce ? 0 : 450);
+    } else {
+      botSay("Всё. Спасибо за честность. Секунду, складываю картину.");
+      analyze();
+    }
+  }
+}
+function refreshHead(){ const h=document.querySelector(".chat-head .count"); if(h) h.textContent=`Вопрос ${T.step+1} из ${QUESTIONS.length}`; }
+
+function analyze(){
+  T.phase="analyzing"; T.status="Складываю картину…"; save(); drawLog(); drawComposer();
+  setTimeout(()=>{ T.result = localAnalyze(); addJournal(T.result); T.phase="result"; save(); render(); }, reduce ? 0 : 1400);
+}
+function restart(){ T = fresh(); save(); render(); }
+
+function renderResult(){
+  const { code, axes, cards } = T.result, st = stackOf(code);
+  const order = [["power",""],["support",""],["shadow","shadow"],["hard",""],["solve",""],["challenge",""]];
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  app.innerHTML = `
+  <section class="result">
+    <header class="r-hero">
+      <p class="r-kicker">Твой тип</p>
+      <h1>${esc(st.title)}</h1>
+      <p class="r-stack">Ведёт ${esc(st.domName)}, опора — ${esc(st.auxName)}</p>
+      <p class="r-portrait">${esc(cards.portrait)}</p>
+    </header>
+    ${order.map(([k,cls])=>cards[k] ? `<article class="rcard ${cls}"><h2>${esc(cards[k].title)}</h2><p>${esc(cards[k].text)}</p></article>` : "").join("")}
+    <article class="rcard axes"><h2>Почему так</h2>
+      ${["EI","SN","TF","JP"].map(k=>{ const a=axes[k]||{}; return `
+        <div class="axis"><div class="axis-top"><b>${POLES[k].name}:</b> ${POLES[k][a.pole]||""}</div>
+          <div class="meter" aria-label="Сила предпочтения ${a.strength||1} из 3">${[1,2,3].map(n=>`<i class="${n<=(a.strength||1)?'on':''}"></i>`).join("")}</div>
+          ${a.quote ? `<p class="axis-q">«${esc(a.quote)}»</p>` : ""}${a.why ? `<p class="axis-why">${esc(a.why)}</p>` : ""}</div>`; }).join("")}
+      <p class="note">Уверенность разбора: ${esc(axes.confidence||"средняя")}. ${esc(T.result.gripNote||"")} Это игра и зеркало, а не диагноз.</p>
+    </article>
+    <div class="r-actions">
+      <button class="btn" id="share">Поделиться карточкой</button>
+      <button class="btn ghost" id="again">Следующий человек</button>
+      <button class="btn ghost" id="csv">Журнал: ${journal().length} (скачать CSV)</button>
+    </div>
+    <nav class="eco" aria-label="Другие проекты">Ещё у нас:
+      ${ECO.map(l=>`<a href="${l.href}" target="_blank" rel="noopener">${l.label}</a>`).join("")}
+    </nav>
+  </section>`;
+  document.getElementById("again").onclick = restart;
+  document.getElementById("csv").onclick = downloadCSV;
+  document.getElementById("share").onclick = ()=>shareCard(st, cards.line || cards.portrait);
+}
+
+/* ---------- карточка для сторис 1080×1920 ---------- */
+async function shareCard(st, line){
+  await document.fonts?.ready;
+  const W=1080, H=1920, c=document.createElement("canvas"); c.width=W; c.height=H;
+  const x=c.getContext("2d");
+  x.fillStyle="#DCD8EE"; x.fillRect(0,0,W,H);
+  x.fillStyle="#F2BE2E"; for(let i=0;i<W;i+=26) for(let j=1100;j<H;j+=26){ x.beginPath(); x.arc(i+13,j+13,5,0,7); x.fill(); }
+  x.fillStyle="#26235E"; x.fillRect(80,240,W-160,4);
+  x.font="44px Pangolin, cursive"; x.fillText("мой тип", 80, 210);
+  x.font="800 96px Unbounded, sans-serif";
+  wrap(x, st.title, 80, 370, W-160, 110);
+  x.font="44px Pangolin, cursive"; x.fillStyle="#5D5A96";
+  wrap(x, `ведёт ${st.domName}, опора — ${st.auxName}`, 80, 620, W-160, 58);
+  x.fillStyle="#26235E"; x.font="56px Pangolin, cursive";
+  wrap(x, line||"", 80, 820, W-160, 72);
+  x.fillStyle="#26235E"; x.fillRect(80,H-260,W-160,150);
+  x.fillStyle="#F2BE2E"; x.font="700 44px Unbounded, sans-serif"; x.fillText("Игра типов", 120, H-168);
+  x.font="36px Pangolin, cursive"; x.fillText("а какой твой?", 620, H-168);
+  const blob = await new Promise(r=>c.toBlob(r,"image/png"));
+  const file = new File([blob],"moy-tip.png",{type:"image/png"});
+  try{ if(navigator.canShare?.({files:[file]})){ await navigator.share({files:[file], title:"Мой тип"}); return; } }catch(e){ if(e.name==="AbortError") return; }
+  saveFile("moy-tip.png", blob);
+}
+function wrap(x, text, left, top, max, lh){
+  const words=String(text).split(" "); let line="", y=top;
+  for(const w of words){ const t=line? line+" "+w : w; if(x.measureText(t).width>max && line){ x.fillText(line,left,y); line=w; y+=lh; } else line=t; }
+  if(line) x.fillText(line,left,y);
+}
+
+render();
+</script>
+</body>
+</html>
+
+</body></html>
